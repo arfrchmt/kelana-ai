@@ -3,7 +3,14 @@ days = int(input("Number of days: "))
 budget = float(input("Budget: $"))
 travel_style = input("Travel Style: ")
 
-print(f"Destination: {destination}")
-print(f"Days: {days}")
-print(f"Budget: ${budget}")
-print(f"Travel Style: {travel_style}")
+
+def print_trip_summary(destination, days, budget, travel_style):
+    print("------------------------")
+    print("KelanaAI")
+    print("------------------------")
+    print(f"Destination : {destination}")
+    print(f"Days        : {days}")
+    print(f"Budget      : {budget}")
+    print(f"Style       : {travel_style}")
+
+print_trip_summary(destination, days, budget, travel_style)
