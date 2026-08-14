@@ -5,6 +5,8 @@ budget = float(input("Budget: "))
 currency  = input("Currency: ")
 travel_month = input("Travel Month: ")
 
+from services.trip_service import calculate_daily_budget, get_trip_category
+get_trip_category
 
 def print_trip_summary(destination, country, days, budget, currency, travel_month):
     print("------------------------")
