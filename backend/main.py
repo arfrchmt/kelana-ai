@@ -1,22 +1,59 @@
-destination = input("Destination: ")
-country = input("Country: ")
-days = int(input("Number of days: "))
-budget = float(input("Budget: "))
-currency  = input("Currency: ")
-travel_month = input("Travel Month: ")
+from fastapi import FastAPI
 
-from services.trip_service import calculate_daily_budget, get_trip_category
-get_trip_category
+app = FastAPI()
 
-def print_trip_summary(destination, country, days, budget, currency, travel_month):
-    print("------------------------")
-    print("KelanaAI")
-    print("------------------------")
-    print(f"Destination : {destination}")
-    print(f"Country : {country}")
-    print(f"Days        : {days}")
-    print(f"Budget      : {budget}")
-    print(f"Currency      : {currency}")
-    print(f"Travel_month       : {travel_month}")
+@app.get("/")
+def home():
+    return {
+        "message": "Welcome to KelanaAI"
+    }
 
-print_trip_summary(destination, country, days, budget, currency, travel_month)
+@app.get("/health")
+def home():
+    return {
+        "Status": "OK"
+    }
+
+from pydantic import BaseModel
+
+class TripRequest(BaseModel):
+    destination: str
+    days: int
+    budget: float
+    recommendations: str
+
+from services.trip_service import (
+    calculate_daily_budget,
+    get_trip_category,
+    get_recommendation_transport,
+    recomendations,
+    recommended_transport
+)
+
+@app.get("/recommendations")
+def create_trip(request: TripRequest):
+    return {
+         "recommended_places": recomendations()
+    }
+
+
+
+@app.post("/api/v1/trips")
+def create_trip(request: TripRequest):
+    daily_budget = calculate_daily_budget(
+        request.budget, request.days
+    )
+    category = get_trip_category(
+        request.budget
+    )
+    transport = get_recommendation_transport(
+        request.budget
+    )
+    return {
+        "destination": request.destination,
+        "budget": request.budget,
+        "daily_budget": daily_budget,
+        "category": category,
+    }
+
+
