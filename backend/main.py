@@ -26,6 +26,7 @@ from services.trip_service import (
     calculate_daily_budget,
     get_trip_category,
     get_recommendation_transport,
+    get_ai_recomendation,
     recomendations,
     recommended_transport
 )
@@ -46,12 +47,13 @@ def create_trip(request: TripRequest):
     # reuse Session 2 business logic
     daily_budget = calculate_daily_budget(request.budget, request.days)
     category     = get_trip_category(request.budget)
-    get_ai_recomendation = get_ai_recomendation(request.destination, request.days, request.budget)
-    ai_recomendation = get_ai_recomendation(
+
+    ai_recommendation = get_ai_recomendation(
         destination=request.destination,
         days=request.days,
         budget=request.budget
-        )
+    )
+
     # create a Trip ORM object
     trip = Trip(
         destination  = request.destination,
@@ -59,7 +61,7 @@ def create_trip(request: TripRequest):
         budget       = request.budget,
         category     = category,
         daily_budget = daily_budget,
-        ai_recomendation = ai_recomendation,
+        ai_recommendation = ai_recommendation,
     )
 
     # save to PostgreSQL
@@ -85,7 +87,7 @@ def get_trip(trip_id: int):
     # handling not found
     if trip is None:
         raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
-    return trip@app.get("/api/v1/trips/{trip_id}")
+    return trip
 
 @app.delete("/api/v1/trips/{trip_id}")
 def delete_trip(trip_id: int):
