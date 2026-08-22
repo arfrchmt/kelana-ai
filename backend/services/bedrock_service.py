@@ -25,7 +25,7 @@ Your recommendation should include:
 
 Keep the plan realistic, well-paced, and suitable for the given travel style.
 Avoid overly expensive suggestions unless the travel style or budget supports it.
-Write the response in a clear and friendly tone.
+Write the response in a clear and friendly tone. Give the answer with markdown format.
 """
 
 
