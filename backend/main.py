@@ -46,7 +46,12 @@ def create_trip(request: TripRequest):
     # reuse Session 2 business logic
     daily_budget = calculate_daily_budget(request.budget, request.days)
     category     = get_trip_category(request.budget)
-
+    get_ai_recomendation = get_ai_recomendation(request.destination, request.days, request.budget)
+    ai_recomendation = get_ai_recomendation(
+        destination=request.destination,
+        days=request.days,
+        budget=request.budget
+        )
     # create a Trip ORM object
     trip = Trip(
         destination  = request.destination,
@@ -54,6 +59,7 @@ def create_trip(request: TripRequest):
         budget       = request.budget,
         category     = category,
         daily_budget = daily_budget,
+        ai_recomendation = ai_recomendation,
     )
 
     # save to PostgreSQL

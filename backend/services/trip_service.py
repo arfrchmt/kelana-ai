@@ -9,6 +9,8 @@ recommended_transport = [
     "Flight"
 ]
 
+from services.bedrock_service import get_ai_recomendation as get_bedrock_ai_recomendation
+
 for place in recommended_places:
     print(f" - {place}")
 
@@ -45,6 +47,14 @@ def get_recommendation_transport(budget):
         return recommended_transport[0]
     else:
         return "Unknown"
+
+def get_ai_recomendation(destination, days, budget):
+    return get_bedrock_ai_recomendation(
+        destination=destination,
+        days=days,
+        budget=budget,
+        travel_style=get_trip_category(budget)
+    )
     
 daily = calculate_daily_budget(1500,5)
 category = get_trip_category(1500)
