@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import boto3
 import os
 from pathlib import Path
+from botocore.exceptions import BotoCoreError, ClientError
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
@@ -18,7 +19,7 @@ Your recommendation should include:
 1. A short overview of the trip.
 2. A day-by-day itinerary with morning, afternoon, and evening activities.
 3. Recommended places to visit.
-4. Suggested local food or restaurants.
+4. Local food recommendations, including must-try dishes and suitable restaurants or food areas.
 5. Transportation recommendations.
 6. Budget guidance in USD.
 7. Useful travel tips for the destination.
@@ -51,21 +52,33 @@ User trip details:
 def get_ai_recomendation(destination, days, budget, travel_style):
     prompt = build_travel_prompt(destination, days, budget, travel_style)
 
-    response = get_bedrock_client().converse(
-        modelId=MODEL_ID,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "text": prompt
-                    }
-                ]
-            }
-        ]
-    )
+    try:
+        response = get_bedrock_client().converse(
+            modelId=MODEL_ID,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ]
+        )
 
-    return response["output"]["message"]["content"][0]["text"]
+        return response["output"]["message"]["content"][0]["text"]
+    except (BotoCoreError, ClientError) as error:
+        return (
+            "AI recommendation is temporarily unavailable. "
+            f"Bedrock error: {error.__class__.__name__}. "
+            "Please refresh your AWS credentials or bearer token, then try again."
+        )
+    except KeyError:
+        return (
+            "AI recommendation is temporarily unavailable because Bedrock returned "
+            "an unexpected response format."
+        )
 
 
 # Create the Bedrock Runtime client

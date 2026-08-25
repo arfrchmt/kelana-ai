@@ -1,6 +1,19 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def home():
@@ -20,6 +33,7 @@ class TripRequest(BaseModel):
     destination: str
     days: int
     budget: float
+    travel_style: Optional[str] = None
     recommendations: str
 
 from services.trip_service import (
@@ -37,7 +51,6 @@ def create_trip(request: TripRequest):
          "recommended_places": recomendations()
     }
 
-
 from models.trip import Trip
 from database import SessionLocal, init_db
 init_db()
@@ -46,12 +59,13 @@ init_db()
 def create_trip(request: TripRequest):
     # reuse Session 2 business logic
     daily_budget = calculate_daily_budget(request.budget, request.days)
-    category     = get_trip_category(request.budget)
+    category     = request.travel_style or get_trip_category(request.budget)
 
     ai_recommendation = get_ai_recomendation(
         destination=request.destination,
         days=request.days,
-        budget=request.budget
+        budget=request.budget,
+        travel_style=category
     )
 
     # create a Trip ORM object

@@ -48,12 +48,12 @@ def get_recommendation_transport(budget):
     else:
         return "Unknown"
 
-def get_ai_recomendation(destination, days, budget):
+def get_ai_recomendation(destination, days, budget, travel_style=None):
     return get_bedrock_ai_recomendation(
         destination=destination,
         days=days,
         budget=budget,
-        travel_style=get_trip_category(budget)
+        travel_style=travel_style or get_trip_category(budget)
     )
     
 daily = calculate_daily_budget(1500,5)
