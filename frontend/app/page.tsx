@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 
 type TripResult = {
@@ -179,6 +180,139 @@ function getDestinationHeroImageUrl(destination: string) {
   return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=80";
 }
 
+function formatCurrencyAmount(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getTravelStyleBadge(style: string) {
+  const normalizedStyle = style.trim().toLowerCase();
+
+  if (normalizedStyle === "backpacker") {
+    return {
+      icon: "backpack",
+      label: "Backpacker",
+      style: "bg-[#750014]/10 text-[#750014]",
+    };
+  }
+
+  if (normalizedStyle === "luxury") {
+    return {
+      icon: "sparkle",
+      label: "Luxury",
+      style: "bg-slate-900 text-white",
+    };
+  }
+
+  if (normalizedStyle === "standard") {
+    return {
+      icon: "check",
+      label: "Standard",
+      style: "bg-slate-200 text-slate-800",
+    };
+  }
+
+  return {
+    icon: "group",
+    label: style || "Family",
+    style: "bg-[#750014]/10 text-[#750014]",
+  };
+}
+
+function TravelStyleBadge({ style }: { style: string }) {
+  const badge = getTravelStyleBadge(style);
+
+  return (
+    <span
+      className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${badge.style}`}
+    >
+      <TravelStyleIcon name={badge.icon} />
+      {badge.label}
+    </span>
+  );
+}
+
+function TravelStyleIcon({ name }: { name: string }) {
+  if (name === "backpack") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M9 7V6a3 3 0 0 1 6 0v1M7 10h10M8 7h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3ZM8 14h3"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+        />
+      </svg>
+    );
+  }
+
+  if (name === "sparkle") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3ZM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+        />
+      </svg>
+    );
+  }
+
+  if (name === "check") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m5 12 4 4L19 6"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20a5 5 0 0 1 10 0M11 20a5 5 0 0 1 10 0"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
 export default function Home() {
   const [destination, setDestination] = useState("");
   const [heroDestination, setHeroDestination] = useState("");
@@ -299,6 +433,15 @@ export default function Home() {
                 Generate a structured trip plan with budget context, travel
                 style, and local food recommendations.
               </p>
+              <Link
+                className="mt-6 inline-flex w-fit items-center rounded-md border border-white/40 bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-white/90 focus:outline-none focus:ring-4 focus:ring-white/25"
+                href="/trips"
+              >
+                View Trip History
+                <span className="ml-2 text-base leading-none" aria-hidden="true">
+                  -&gt;
+                </span>
+              </Link>
             </div>
           </div>
         </header>
@@ -396,15 +539,19 @@ export default function Home() {
                       Budget
                     </dt>
                     <dd className="mt-1 text-lg font-semibold text-slate-950">
-                      {result.budget} USD
+                      {formatCurrencyAmount(result.budget)} USD
                     </dd>
                   </div>
                   <div className="rounded-md bg-slate-50 p-4">
                     <dt className="text-xs font-semibold uppercase tracking-wide text-[#750014]">
                       Travel style
                     </dt>
-                    <dd className="mt-1 text-lg font-semibold text-slate-950">
-                      {result.travel_style ?? result.category ?? "Unknown"}
+                    <dd className="mt-2 text-lg font-semibold text-slate-950">
+                      <TravelStyleBadge
+                        style={
+                          result.travel_style ?? result.category ?? "Unknown"
+                        }
+                      />
                     </dd>
                   </div>
                 </dl>
