@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text
+from sqlalchemy import BigInteger, Boolean, Column, Float, ForeignKey, Integer, String, Text
 from database import Base
 
 class Trip(Base):
@@ -10,3 +10,5 @@ class Trip(Base):
     category      = Column(String,  nullable=False)
     daily_budget  = Column(Float,   nullable=False)
     ai_recommendation = Column(Text, nullable=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
+    is_active     = Column(Boolean, nullable=False, default=True, server_default="true")

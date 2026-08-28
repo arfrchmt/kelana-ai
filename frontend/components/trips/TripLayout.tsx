@@ -1,5 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+
+import { clearAuth, getAccessToken, getAuthUser } from "@/services/authService";
 
 type BreadcrumbItem = {
   href?: string;
@@ -15,17 +21,77 @@ export function TripPageShell({ children }: { children: ReactNode }) {
 }
 
 export function TripHeader() {
+  const router = useRouter();
+  const [userName, setUserName] = useState("");
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setHasToken(Boolean(getAccessToken()));
+      setUserName(getAuthUser()?.name ?? "");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  function handleLogout() {
+    clearAuth();
+    setHasToken(false);
+    setUserName("");
+    router.push("/login");
+  }
+
   return (
-    <header className="mb-6 flex items-center justify-between gap-4 border-b border-slate-200 pb-5">
+    <header className="mb-6 flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
       <Link className="text-xl font-semibold text-slate-950" href="/">
         Kelana AI
       </Link>
-      <Link
-        className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#750014] hover:text-[#750014]"
-        href="/trips"
-      >
-        Trip History
-      </Link>
+      <nav className="flex flex-wrap items-center gap-2" aria-label="Main navigation">
+        <Link
+          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#750014] hover:text-[#750014]"
+          href="/trips"
+        >
+          Trip History
+        </Link>
+
+        {hasToken ? (
+          <>
+            <Link
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#750014] hover:text-[#750014]"
+              href="/profile"
+            >
+              Profile
+            </Link>
+            {userName ? (
+              <span className="max-w-40 truncate px-2 text-sm font-medium text-slate-600">
+                {userName}
+              </span>
+            ) : null}
+            <button
+              className="rounded-md bg-[#750014] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#5f0010] focus:outline-none focus:ring-4 focus:ring-[#750014]/20"
+              onClick={handleLogout}
+              type="button"
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <>
+            <Link
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#750014] hover:text-[#750014]"
+              href="/login"
+            >
+              Login
+            </Link>
+            <Link
+              className="rounded-md bg-[#750014] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#5f0010]"
+              href="/register"
+            >
+              Register
+            </Link>
+          </>
+        )}
+      </nav>
     </header>
   );
 }

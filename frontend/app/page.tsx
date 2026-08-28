@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 
+import { clearAuth, getAccessToken, getAuthUser } from "@/services/authService";
+
 type TripResult = {
   destination: string;
   budget: number;
@@ -322,9 +324,20 @@ export default function Home() {
   const [result, setResult] = useState<TripResult | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [hasToken, setHasToken] = useState(false);
   const heroImageUrl = getDestinationHeroImageUrl(heroDestination);
   const [loadedHeroImageUrl, setLoadedHeroImageUrl] = useState("");
   const heroImageLoaded = loadedHeroImageUrl === heroImageUrl;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setHasToken(Boolean(getAccessToken()));
+      setUserName(getAuthUser()?.name ?? "");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -351,12 +364,20 @@ export default function Home() {
     setError("");
     setResult(null);
     setHeroDestination(destination.trim());
+
+    const token = window.localStorage.getItem("kelana_access_token");
+    if (!token) {
+      setError("Please login before creating a trip");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const response = await fetch("http://localhost:8000/api/v1/trips", {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -382,6 +403,13 @@ export default function Home() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function handleLogout() {
+    clearAuth();
+    setHasToken(false);
+    setUserName("");
+    setError("You have been logged out");
   }
 
   return (
@@ -433,15 +461,54 @@ export default function Home() {
                 Generate a structured trip plan with budget context, travel
                 style, and local food recommendations.
               </p>
-              <Link
-                className="mt-6 inline-flex w-fit items-center rounded-md border border-white/40 bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-white/90 focus:outline-none focus:ring-4 focus:ring-white/25"
-                href="/trips"
-              >
-                View Trip History
-                <span className="ml-2 text-base leading-none" aria-hidden="true">
-                  -&gt;
-                </span>
-              </Link>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Link
+                  className="inline-flex w-fit items-center rounded-md border border-white/40 bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-white/90 focus:outline-none focus:ring-4 focus:ring-white/25"
+                  href="/trips"
+                >
+                  View Trip History
+                  <span className="ml-2 text-base leading-none" aria-hidden="true">
+                    -&gt;
+                  </span>
+                </Link>
+                {hasToken ? (
+                  <>
+                    {userName ? (
+                      <span className="max-w-44 truncate text-sm font-semibold text-white/85">
+                        {userName}
+                      </span>
+                    ) : null}
+                    <Link
+                      className="inline-flex w-fit items-center rounded-md border border-white/35 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-white/20"
+                      href="/profile"
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      className="inline-flex w-fit items-center rounded-md border border-white/35 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-white/20"
+                      onClick={handleLogout}
+                      type="button"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                <Link
+                  className="inline-flex w-fit items-center rounded-md border border-white/35 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-white/20"
+                  href="/login"
+                >
+                  Login
+                </Link>
+                <Link
+                  className="inline-flex w-fit items-center rounded-md border border-white/35 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-white/20"
+                  href="/register"
+                >
+                  Register
+                </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </header>
