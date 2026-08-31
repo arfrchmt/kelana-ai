@@ -1,11 +1,19 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+
 import type { Trip } from "@/services/tripService";
+import {
+  AssistantAnswer,
+  askAssistant,
+} from "@/services/assistantService";
 
 import { TripBadge } from "./TripBadge";
 import { formatAmount } from "./format";
 
 export function TripDetailSummary({ trip }: { trip: Trip }) {
   return (
-    <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <section className="h-full rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-[#750014]">
@@ -18,7 +26,7 @@ export function TripDetailSummary({ trip }: { trip: Trip }) {
         <TripBadge category={trip.category} />
       </div>
 
-      <dl className="mt-7 grid gap-3 sm:grid-cols-3">
+      <dl className="mt-7 grid gap-3 sm:grid-cols-2">
         <DetailStat label="Destination" value={trip.destination} />
         <DetailStat label="Budget" value={`USD ${formatAmount(trip.budget)}`} />
         <DetailStat label="Category" value={trip.category} />
@@ -52,6 +60,167 @@ export function TripRecommendation({ recommendation }: { recommendation: string 
         ))}
       </div>
     </section>
+  );
+}
+
+export function TripAssistantChat({ trip }: { trip: Trip }) {
+  const [question, setQuestion] = useState(
+    `What should I know before visiting ${trip.destination}?`,
+  );
+  const [messages, setMessages] = useState<AssistantAnswer[]>([]);
+  const [error, setError] = useState("");
+  const [isAsking, setIsAsking] = useState(false);
+
+  async function handleAsk(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedQuestion = question.trim();
+
+    if (!trimmedQuestion) {
+      setError("Question cannot be empty");
+      return;
+    }
+
+    setError("");
+    setIsAsking(true);
+
+    try {
+      const contextualQuestion = [
+        `Trip context: destination=${trip.destination}, days=${trip.days}, budget=USD ${trip.budget}, travel style=${trip.category}.`,
+        `User question: ${trimmedQuestion}`,
+      ].join("\n");
+      const answer = await askAssistant(contextualQuestion);
+
+      setMessages((current) => [
+        ...current,
+        {
+          ...answer,
+          question: trimmedQuestion,
+        },
+      ]);
+      setQuestion("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to ask KelanaAI");
+    } finally {
+      setIsAsking(false);
+    }
+  }
+
+  return (
+    <section className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-center gap-4">
+        <h2 className="shrink-0 text-sm font-semibold uppercase tracking-wide text-[#750014]">
+          RAG Travel Assistant
+        </h2>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
+      <p className="mt-3 text-sm leading-6 text-slate-500">
+        Ask questions grounded in your travel documents. This chat includes
+        {` ${trip.destination}`} as the default trip context.
+      </p>
+
+      <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#750014]">
+          Active context
+        </p>
+        <p className="mt-1 text-sm font-medium text-slate-700">
+          {trip.destination} | {trip.days} days | USD {formatAmount(trip.budget)} |{" "}
+          {trip.category}
+        </p>
+      </div>
+
+      <div className="mt-5 flex-1 space-y-4">
+        {messages.length > 0 ? (
+          messages.map((message, index) => (
+            <article
+              className="overflow-hidden rounded-lg border border-slate-200"
+              key={`${index}-${message.question.slice(0, 16)}`}
+            >
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Question
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-900">
+                  {message.question}
+                </p>
+              </div>
+              <div className="bg-teal-600 px-4 py-4 text-white">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-bold uppercase tracking-wide">
+                    AI Answer
+                  </p>
+                  <ConfidenceScore score={message.confidence_score} />
+                </div>
+                <p className="mt-2 whitespace-pre-line text-sm leading-7">
+                  {message.answer}
+                </p>
+
+                <div className="mt-5 border-t border-white/30 pt-3">
+                  <p className="text-xs font-bold uppercase tracking-wide">
+                    Source
+                  </p>
+                  {message.sources.length > 0 ? (
+                    <ul className="mt-2 space-y-1 font-mono text-xs">
+                      {message.sources.map((source) => (
+                        <li key={source.uri}>
+                          <a
+                            className="inline-flex max-w-full gap-2 text-white underline-offset-4 hover:underline"
+                            href={source.uri}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            <span aria-hidden="true">[doc]</span>
+                            <span className="truncate">{source.name}</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-white/85">
+                      No source returned by the Knowledge Base.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))
+        ) : (
+          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+            Ask a destination-specific question to start the assistant chat.
+          </div>
+        )}
+      </div>
+
+      {error ? (
+        <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+          {error}
+        </p>
+      ) : null}
+
+      <form className="mt-5 flex flex-col gap-3 sm:flex-row" onSubmit={handleAsk}>
+        <input
+          className="min-h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-950 outline-none transition focus:border-[#750014] focus:ring-4 focus:ring-[#750014]/10"
+          onChange={(event) => setQuestion(event.target.value)}
+          placeholder={`Ask about ${trip.destination}`}
+          value={question}
+        />
+        <button
+          className="rounded-md bg-[#750014] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#5f0010] disabled:cursor-not-allowed disabled:bg-slate-400"
+          disabled={isAsking}
+          type="submit"
+        >
+          {isAsking ? "Asking..." : "Ask"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function ConfidenceScore({ score }: { score?: number | null }) {
+  return (
+    <span className="rounded-md border border-white/30 bg-white/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+      Confidence: {typeof score === "number" ? `${score}%` : "N/A"}
+    </span>
   );
 }
 

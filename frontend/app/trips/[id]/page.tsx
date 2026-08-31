@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 import {
+  TripAssistantChat,
   TripDetailSummary,
   TripRecommendation,
 } from "@/components/trips/TripDetail";
@@ -258,7 +259,10 @@ export default function TripDetailPage() {
             </form>
           ) : null}
 
-          <TripDetailSummary trip={trip} />
+          <div className="mt-5 grid gap-5 lg:grid-cols-2 lg:items-stretch">
+            <TripDetailSummary trip={trip} />
+            <TripAssistantChat trip={trip} />
+          </div>
           <TripRecommendation recommendation={trip.ai_recommendation} />
 
           {isDeleteDialogOpen ? (

@@ -70,6 +70,17 @@ class PasswordUpdateRequest(BaseModel):
     current_password: str
     new_password: str
 
+class QuestionRequest(BaseModel):
+    question: str
+
+    @field_validator("question")
+    @classmethod
+    def question_must_not_be_empty(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Question cannot be empty")
+        return value
+
 class UserResponse(BaseModel):
     id: int
     name: str
@@ -112,6 +123,7 @@ from services.auth_service import (
     hash_password,
     register_user,
 )
+from services.kb_service import ask_knowledge_base
 
 from models.trip import Trip
 from models.user import User
@@ -239,6 +251,16 @@ def update_password(
 def get_recommendations(current_user: User = Depends(get_current_user)):
     return {
          "recommended_places": recomendations()
+    }
+
+@app.post("/api/v1/ask")
+def ask_endpoint(request: QuestionRequest):
+    result = ask_knowledge_base(request.question)
+    return {
+        "question": request.question,
+        "answer": result["answer"],
+        "confidence_score": result["confidence_score"],
+        "sources": result["sources"],
     }
 
 @app.post("/api/v1/trips")
