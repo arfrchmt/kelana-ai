@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 from urllib.parse import urlparse
@@ -28,14 +30,38 @@ def get_bedrock_runtime_client():
     )
 
 
-def build_grounded_prompt(question: str, retrieved_texts: list[str]) -> str:
-    context = "\n\n---\n\n".join(retrieved_texts)
-    return f"""
-You are a travel assistant. Answer the user's question using only the context
-retrieved from the Knowledge Base.
+def build_conversation_context(messages: list[dict]) -> str:
+    if not messages:
+        return "No previous conversation."
 
-If the context does not contain enough information, say that you do not have
-enough information in the Knowledge Base to answer confidently.
+    formatted_messages = []
+    for message in messages:
+        role = str(message.get("role", "unknown")).upper()
+        content = str(message.get("content", "")).strip()
+        if content:
+            formatted_messages.append(f"{role}: {content}")
+
+    return "\n".join(formatted_messages) or "No previous conversation."
+
+
+def build_grounded_prompt(
+    question: str,
+    retrieved_texts: list[str],
+    conversation_history: list[dict] | None = None,
+) -> str:
+    context = "\n\n---\n\n".join(retrieved_texts)
+    history = build_conversation_context(conversation_history or [])
+    return f"""
+You are a travel assistant. Answer the user's question using the context retrieved
+from the Knowledge Base and the previous conversation history from the message database.
+
+Important instructions:
+1. Always utilize the previous conversation history to understand references, follow-up questions,
+   pronouns (e.g., "di sana", "itu", "tersebut", "there"), and user preferences mentioned in earlier messages.
+2. Ground your factual knowledge (places, rules, facts) strictly in the retrieved Knowledge Base context.
+3. If the user asks a follow-up question, answer it in direct continuation of the previous conversation.
+4. If the retrieved context does not contain enough information to answer, state clearly
+   what is missing based on the available knowledge.
 
 Return only valid JSON with this shape:
 {{
@@ -46,10 +72,13 @@ Return only valid JSON with this shape:
 Set confidence_score from 0 to 100 based on how completely the retrieved
 Knowledge Base context supports your answer.
 
-Context:
+Retrieved Knowledge Base Context:
 {context}
 
-Question:
+Previous Conversation History (from Message database):
+{history}
+
+Current Question:
 {question}
 """
 
@@ -125,7 +154,7 @@ def parse_answer_payload(text: str) -> dict:
     }
 
 
-def ask_knowledge_base(question: str):
+def ask_knowledge_base(question: str, conversation_history: list[dict] | None = None):
     if not KNOWLEDGE_BASE_ID:
         return {
             "answer": (
@@ -137,12 +166,42 @@ def ask_knowledge_base(question: str):
         }
 
     try:
+        # Determine retrieval query, augmenting with conversation context if it's a follow-up
+        retrieval_query = question
+        if conversation_history:
+            recent_user_texts = [
+                str(m.get("content", "")).strip()
+                for m in conversation_history
+                if str(m.get("role", "")).lower() == "user" and m.get("content")
+            ]
+            if recent_user_texts:
+                last_user_context = recent_user_texts[-1][:120]
+                followup_indicators = [
+                    "di sana", "disana", "itu", "tersebut", "mereka", "biaya",
+                    "hotel", "penginapan", "transportasi", "makanan", "kuliner",
+                    "rekomendasi", "bagaimana", "berapa", "kapan", "ada apa",
+                ]
+                is_followup = (
+                    len(question.split()) < 10
+                    or any(w in question.lower() for w in followup_indicators)
+                )
+                if is_followup:
+                    retrieval_query = f"{last_user_context} {question}"[:400]
+
         retrieval_response = get_bedrock_agent_client().retrieve(
             knowledgeBaseId=KNOWLEDGE_BASE_ID,
-            retrievalQuery={"text": question},
+            retrievalQuery={"text": retrieval_query},
         )
 
         retrieved_texts = extract_retrieved_texts(retrieval_response)
+        # Fallback to pure question if augmented query returned no texts
+        if not retrieved_texts and retrieval_query != question:
+            retrieval_response = get_bedrock_agent_client().retrieve(
+                knowledgeBaseId=KNOWLEDGE_BASE_ID,
+                retrievalQuery={"text": question},
+            )
+            retrieved_texts = extract_retrieved_texts(retrieval_response)
+
         if not retrieved_texts:
             return {
                 "answer": "No relevant Knowledge Base content was found for this question.",
@@ -157,7 +216,11 @@ def ask_knowledge_base(question: str):
                     "role": "user",
                     "content": [
                         {
-                            "text": build_grounded_prompt(question, retrieved_texts),
+                            "text": build_grounded_prompt(
+                                question,
+                                retrieved_texts,
+                                conversation_history,
+                            ),
                         }
                     ],
                 }

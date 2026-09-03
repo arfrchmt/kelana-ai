@@ -11,15 +11,14 @@ recommended_transport = [
 
 from services.bedrock_service import get_ai_recomendation as get_bedrock_ai_recomendation
 
-for place in recommended_places:
-    print(f" - {place}")
 
 def recomendations():
-    for place in recommended_places:
-        return place
+    return recommended_places
+
 
 def calculate_daily_budget(budget, days):
-    return budget/days
+    return budget / days
+
 
 def get_trip_category(budget):
     if budget < 1000:
@@ -28,7 +27,8 @@ def get_trip_category(budget):
         return "Standard"
     else:
         return "Luxury"
-    
+
+
 def get_travel_session(month):
     if month == 12:
         return "Peak Season"
@@ -36,6 +36,7 @@ def get_travel_session(month):
         return "Holiday Season"
     else:
         return "Regular Season"
+
 
 def get_recommendation_transport(budget):
     category = get_trip_category(budget)
@@ -48,6 +49,7 @@ def get_recommendation_transport(budget):
     else:
         return "Unknown"
 
+
 def get_ai_recomendation(destination, days, budget, travel_style=None):
     return get_bedrock_ai_recomendation(
         destination=destination,
@@ -55,8 +57,10 @@ def get_ai_recomendation(destination, days, budget, travel_style=None):
         budget=budget,
         travel_style=travel_style or get_trip_category(budget)
     )
-    
-daily = calculate_daily_budget(1500,5)
-category = get_trip_category(1500)
-transport = get_recommendation_transport(1500)
-print(f"{category} - {daily} USD/day - {transport}")
+
+
+if __name__ == "__main__":
+    daily = calculate_daily_budget(1500, 5)
+    category = get_trip_category(1500)
+    transport = get_recommendation_transport(1500)
+    print(f"{category} - {daily} USD/day - {transport}")

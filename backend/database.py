@@ -19,4 +19,18 @@ Base = declarative_base()
 # create all tables
 def init_db() -> None:
     """Create all SQLAlchemy tables for the configured database."""
+    import models.user
+    import models.trip
+    import models.conversation
+
     Base.metadata.create_all(bind=engine)
+
+
+
+def get_db():
+    """Dependency generator yielding a database session per request."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
