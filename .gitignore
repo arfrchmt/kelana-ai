@@ -1,2 +1,4 @@
 .delete/
 .env
+.env.neondb
+.env.local
